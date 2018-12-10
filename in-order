@@ -1,5 +1,6 @@
 #! /usr/bin/perl -w
 use strict;
+
 #use utf8;
 
 use File::Basename;
@@ -11,10 +12,11 @@ use URI::Encode qw/uri_decode uri_encode/;
 use constant ID_ICONVIEW => 48;
 use constant ID_LABEL    => 49;
 use constant ID_URI      => 50;
-use constant EEXIST => 17;
+use constant EEXIST      => 17;
 my $BASEDIR = $ENV{HOME} . "/.in-order";
-my $DROPLIST;   # global since we need to clear it
+my $DROPLIST;    # global since we need to clear it
 my $NLINK = 0;
+
 # Create working dir for ordered softlinks
 
 die "*** Cannot create directory $BASEDIR: $!\n"
@@ -72,8 +74,8 @@ sub item_list {
     $DROPLIST = Gtk2::SimpleList->new('Filename' => 'text');
     $DROPLIST->set_rules_hint(TRUE);
     $DROPLIST->set_headers_visible(FALSE);
-    $DROPLIST->get_selection->set_mode ('multiple');
-  
+    $DROPLIST->get_selection->set_mode('multiple');
+
     # Make this list be a drop target
     my @target_table = (
         {'target' => 'STRING',        'flags' => [], 'info' => ID_ICONVIEW},
@@ -84,25 +86,30 @@ sub item_list {
     $DROPLIST->signal_connect('drag-data-received' => \&target_drag_data_received, $DROPLIST);
 
     # It can also be a drag source
-    $DROPLIST->drag_source_set ( ['button1_mask', 'button3_mask'],
-                                 ['copy'],
-                                 {
-                                     'target' => 'text/uri-list',
-                                     'flags' => [],
-                                     'info' => ID_URI,
-                                 },
-                         );
-     #set up the data which needs to be fed to the drag destination (drop)
-     $DROPLIST->signal_connect ('drag-data-get' => sub { 
-        print "signal called got @_\n";
-        my @selected = $DROPLIST->get_selected_indices();
-        my $uri_string = q{};
-        my @items = @{$DROPLIST->{data}};
-        foreach my $idx (@selected) {
-            $uri_string .= "file:///$BASEDIR/" . $items[$idx]->[0] . "\n";
+    $DROPLIST->drag_source_set(
+        ['button1_mask', 'button3_mask'],
+        ['copy'],
+        {   'target' => 'text/uri-list',
+            'flags'  => [],
+            'info'   => ID_URI,
+        },
+    );
+
+    #set up the data which needs to be fed to the drag destination (drop)
+    $DROPLIST->signal_connect(
+        'drag-data-get' => sub {
+            print "signal called got @_\n";
+            my @selected   = $DROPLIST->get_selected_indices();
+            my $uri_string = q{};
+            my @items      = @{$DROPLIST->{data}};
+            foreach my $idx (@selected) {
+                $uri_string .= "file:///$BASEDIR/" . $items[$idx]->[0] . "\n";
+            }
+            source_drag_data_get(
+                @_, $uri_string
+                );
         }
-        source_drag_data_get(@_, $uri_string)
-     } );
+    );
 
     # Stick it in a scrolled window so it can grow
     my $sw = Gtk2::ScrolledWindow->new(undef, undef);
@@ -114,17 +121,17 @@ sub item_list {
 }
 
 sub source_drag_data_get {
-    my ($widget, $context, $data, $info, $time,$string) = @_;
-    $data->set_text($string,-1);
+    my ($widget, $context, $data, $info, $time, $string) = @_;
+    $data->set_text($string, -1);
 }
 
 sub target_drag_data_received {
 
     my ($widget, $context, $x, $y, $data, $info, $time, $droplist) = @_;
 
-#    if ($info eq ID_LABEL) {
-#        push @{$droplist->{data}}, [$data->data];
-#    }
+    #    if ($info eq ID_LABEL) {
+    #        push @{$droplist->{data}}, [$data->data];
+    #    }
 
     if ($info eq ID_URI) {
         foreach my $uri ($data->get_uris) {
@@ -134,9 +141,10 @@ sub target_drag_data_received {
             $linkname =~ s{^\d+\.?\s*}{};
             $linkname =~ s{[^a-z0-9\.\,\;\-]}{-}ig;
             $linkname =~ s{[\ ]}{_}g;
-            $linkname =~ s{^(.{1,53}).*?(\.mp3)$}{$1$2}i;   # Limit length so whole is < 64 chars
+            $linkname =~ s{^(.{1,53}).*?(\.mp3)$}{$1$2}i;    # Limit length so whole is < 64 chars
             $linkname = sprintf("%5.5d:%s", ++$NLINK, $linkname);
             utf8::downgrade($filename);
+
             if (!symlink($filename, "$BASEDIR/$linkname")) {
                 print "*** Error creating link: $!\n";
                 continue;
@@ -146,9 +154,9 @@ sub target_drag_data_received {
         }
     }
 
-#    if ($info eq ID_ICONVIEW) {
-#        push @{$droplist->{data}}, [$data->data];
-#    }
+    #    if ($info eq ID_ICONVIEW) {
+    #        push @{$droplist->{data}}, [$data->data];
+    #    }
 
     $context->finish(0, 0, $time);
 }
