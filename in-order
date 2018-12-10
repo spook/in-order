@@ -52,24 +52,6 @@ sub do_clear {
     $NLINK = 0;
 }
 
-sub load_list {
-    foreach my $oldlink (glob("$BASEDIR/*")) {
-        push @{$DROPLIST->{data}}, basename($oldlink);
-    }
-}
-
-sub main_box {
-    my $box = Gtk2::VBox->new(FALSE, 5);
-    my $button = Gtk2::Button->new("Clear");
-    $button->signal_connect(clicked => \&do_clear, $MW);
-    $box->add($button);
-    my $h_paned = Gtk2::HPaned->new();
-    $h_paned->pack2(item_list(), TRUE, FALSE);
-    $box->add($h_paned);
-    $box->show_all();
-    return $box;
-}
-
 sub item_list {
     $DROPLIST = Gtk2::SimpleList->new('Filename' => 'text');
     $DROPLIST->set_rules_hint(TRUE);
@@ -116,8 +98,29 @@ sub item_list {
     $sw->set_policy('never', 'automatic');
     $sw->add($DROPLIST);
     $sw->set_border_width(6);
-    $sw->set_size_request(600, 150);
+    $sw->set_size_request(600, 250);
     return $sw;
+}
+
+sub load_list {
+    foreach my $oldlink (glob("$BASEDIR/*")) {
+        push @{$DROPLIST->{data}}, basename($oldlink);
+    }
+}
+
+sub main_box {
+    my $box = Gtk2::VBox->new(FALSE, 5);
+    my $button = Gtk2::Button->new("Clear");
+    $button->signal_connect(clicked => \&do_clear, $MW);
+    $box->add($button);
+    my $label = Gtk2::Label->new("Drag playlist to the below window for sequencing.\n"
+                               . "Sorted links will be written to $BASEDIR");
+    $box->add($label);
+    my $h_paned = Gtk2::HPaned->new();
+    $h_paned->pack2(item_list(), TRUE, FALSE);
+    $box->add($h_paned);
+    $box->show_all();
+    return $box;
 }
 
 sub source_drag_data_get {
